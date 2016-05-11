@@ -1,7 +1,9 @@
 /*
     load_and_search.cpp
-
-    By Stephen Holiday 2011
+	
+	The code has been modified by Nirmalya Bandyopadhyay from 
+    ------
+	Stephen Holiday 2011
     http://stephenholiday.com
     (Exception, Distance Algorithm by Anders Sewerin Johansen)
 
@@ -28,6 +30,7 @@
 
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
+#include <boost/regex.hpp>
 
 int main(int argc, char* argv[]) { 
     
@@ -37,16 +40,26 @@ int main(int argc, char* argv[]) {
     std::string str;
     
     std::ofstream ofs(argv[2]);
-    
+    boost::regex expr ("NNNNNN(\\w{6})");
+	boost::smatch what;	
     
     if ( !words.is_open() ) {
       // The file could not be opened
     }
     else {
-        while(std::getline(words, str))
-           {
-               tree.insert(str);
-           }
+        while(std::getline(words, str)) {
+				
+			// Extract the six bases from each of the line after NNNNNN
+			bool res = boost::regex_search(str, what, expr);
+			//std::cout << str << "\n";
+			if (res) {				
+				//std::cout << what[1] << "\n";
+				std::string lstr = what[1];
+        		tree.insert(lstr);
+			}
+			//std::cout << res << "\n";
+			
+		}
     }
     
     std::cout<<"Loaded "<<tree.size()<< " entries"<<std::endl;
