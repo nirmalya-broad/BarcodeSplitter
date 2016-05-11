@@ -1,6 +1,9 @@
 /*
     load_and_search.cpp
-
+	
+	By Nirmalya Bandyopadhyay 
+	adapted from 
+	---
     By Stephen Holiday 2011
     http://stephenholiday.com
     (Exception, Distance Algorithm by Anders Sewerin Johansen)
@@ -58,9 +61,93 @@ int distance(std::string source, std::string target) {
     }
 
     return ldist;
+}	
+
+
+unsigned long 
+updateMaps(std::string& barcode_str, 
+	std::string& lword1, std::string& lword2, 
+	std::string& lword3, std::string& lword4, 
+	std::string& rword1, std::string& rword2, 
+	std::string& rword3, std::string rword4, 
+	std::map<std::string, std::vector<std::string>>& lQueueMap,
+    std::map<std::string, std::vector<std::string>>& rQueueMap,
+	unsigned long totalcap) {
+
+	// Get the capacity of the the eight strings as we have to insert
+	// them into the two maps.
+	int lcap1 = lword1.capacity();
+	int lcap2 = lword2.capacity();
+	int lcap3 = lword3.capacity();
+	int lcap4 = lword4.capacity();
+
+	int rcap1 = rword1.capacity();
+	int rcap2 = rword2.capacity();
+	int rcap3 = rword3.capacity();
+	int rcap4 = rword4.capacity();
+	
+	int allcap = lcap1 + lcap2 + lcap3 + lcap4 + rcap1 + rcap2 + rcap3 + rcap4;
+
+	totalcap += allcap;
+
+	lQueueMap[barcode_str].push_back(lword1);
+	lQueueMap[barcode_str].push_back(lword2);
+	lQueueMap[barcode_str].push_back(lword3);
+	lQueueMap[barcode_str].push_back(lword4);
+
+	rQueueMap[barcode_str].push_back(rword1);
+	rQueueMap[barcode_str].push_back(rword2);
+	rQueueMap[barcode_str].push_back(rword3);
+	rQueueMap[barcode_str].push_back(rword4);
+
+	return totalcap;
+
 }
 
+void writeMapsToFile(std::map<std::string, std::vector<std::string>>& lQueueMap,
+		std::map<std::string, std::vector<std::string>>& rQueueMap,
+		std::set<std::string>& outfile_set, std::string const& outdirpath) {
+	
+	for (auto& kv : lQueueMap) {
+	    std::string barcode = kv.first;
 
+        const std::string file1 = outdirpath + "/" + barcode + "_1.fastq";
+        const std::string file2 = outdirpath + "/" + barcode + "_2.fastq";
+
+        std::ofstream ofs1;
+        std::ofstream ofs2;
+        if (outfile_set.count(barcode) > 0) {
+	        ofs1 = std::ofstream(file1, std::ofstream::out|std::ofstream::app);
+            ofs2 = std::ofstream(file2, std::ofstream::out|std::ofstream::app);
+        } else {
+
+            ofs1 = std::ofstream(file1, std::ofstream::out|std::ofstream::trunc);
+            ofs2 = std::ofstream(file2, std::ofstream::out|std::ofstream::trunc);
+            outfile_set.insert(barcode);
+        }
+
+        // Dump the content of the two maps to the two files
+
+        std::vector<std::string> & valSet1 = lQueueMap[barcode];
+        std::vector<std::string> & valSet2 = rQueueMap[barcode];
+
+        for (auto const& kv1 : valSet1) {
+ 	        std::string val1 = kv1;
+            ofs1 << val1 << '\n';
+        }
+
+        ofs1.close();
+
+		for (auto const& kv2 : valSet2) {
+        	std::string val2 = kv2;
+            ofs2 << val2 << '\n';
+        }
+
+        ofs2.close();
+
+	}
+
+} 
 
 int main(int argc, char* argv[]) { 
     BKTree<std::string> tree;
@@ -81,24 +168,22 @@ int main(int argc, char* argv[]) {
 	std::string file1_str = argv[2];
 	std::string file2_str = argv[3];
 	int cutoff = atoi(argv[4]);
+	std::string outdirpath = argv[5];
 
-	std::ifstream file1(file1_str);
-	std::ifstream file2(file2_str);
-
-	std::map<int, int> distmap;
 
 	std::set<std::string> barcode_set;
+	std::set<std::string> outfile_set;
 
+	std::map<int, int> distmap;
 	for (int j = 0; j <= cutoff; j++) {
 		distmap[j] = 0;
 	}	
 
 
-	std::string outdirpath = argv[5];
 	struct stat st = {0};
 
-	if (stat(outdirpath, &st) == -1) {
-		mkdir(outdirpath, 0700);
+	if (stat(outdirpath.c_str(), &st) == -1) {
+		mkdir(outdirpath.c_str(), 0700);
 	}
 
 
@@ -111,12 +196,11 @@ int main(int argc, char* argv[]) {
 	// at that time sequentially. This is a sort of lazy update, I hope that
 	// it would provide good performence.
 
-	std::map<std::string, set<std::string>> lQueueMap;
-	std::map<std::string, set<std::string>> rQueueMap;
+	std::map<std::string, std::vector<std::string>> lQueueMap;
+	std::map<std::string, std::vector<std::string>> rQueueMap;
 
 	int barcode_start = 6;
 	int barcode_size = 6;
-	unsigned long lcount = 0;
 
 	// The words starting with lword is for read 1
 	std::string lword1;
@@ -138,6 +222,9 @@ int main(int argc, char* argv[]) {
 
 	// We shall start reading the first line. The assumption is that second line 
 	// contains the barcode.
+	std::ifstream file1(file1_str);
+	std::ifstream file2(file2_str);
+
 	while (std::getline(file1, lword1)) {
 
 		if (!std::getline(file1, lword2)) {break;}
@@ -149,18 +236,17 @@ int main(int argc, char* argv[]) {
 		if (!std::getline(file2, rword3)) {break;}
 		if (!std::getline(file2, rword4)) {break;}
 
-		lword = lword2;
-		std::string barcode_str = lword.substr(barcode_start, barcode_size);	
+		// The barcode stays at the second line of each four lines of first
+		// read file.
+		std::string barcode_str = lword2.substr(barcode_start, barcode_size);	
 	
-		std::vector<std::string> results;
-		results = tree.find(barcode_str, cutoff);
-			
-		std::vector<std::string>::iterator it;
+		std::vector<std::string> results = tree.find(barcode_str, cutoff);
 
 		// calculate the minimum distance between the target and references
+
 		int smallest_dist = cutoff;
-		for ( it=results.begin() ; it < results.end(); it++ ) {
-			int ldist = distance(*it, barcode_str);
+		for (auto const& val : results) {
+			int ldist = distance(val, barcode_str);
 			if (ldist < smallest_dist) {
 				smallest_dist = ldist;
 			}
@@ -168,71 +254,43 @@ int main(int argc, char* argv[]) {
 
 		if (smallest_dist == 0) {
 			barcode_set.insert(barcode_str);
-			// Get the capacity of the the eight strings as we have to insert
-			// them into the two maps.
-			int lcap1 = lword1.capacity();
-			int lcap2 = lword2.capacity();
-			int lcap3 = lword3.capacity();
-			int lcap4 = lword4.capacity();
-
-			int rcap1 = rword1.capacity();
-			int rcap2 = rword2.capacity();
-			int rcap3 = rword3.capacity();
-			int rcap4 = rword4.capacity();
-	
-
-			int allcap = lcap1 + lcap2 + lcap3 + lcap4 + rcap1 + rcap2 + rcap3 + rcap4;
-
-			totalcap += allcap;
-
-			lQueueMap[barcode_str].insert(lword1);
-			lQueueMap[barcode_str].insert(lword2);
-			lQueueMap[barcode_str].insert(lword3);
-			lQueueMap[barcode_str].insert(lword4);
-
-			rQueueMap[barcode_str].insert(rword1);
-			rQueueMap[barcode_str].insert(rword2);
-			rQueueMap[barcode_str].insert(rword3);
-			rQueueMap[barcode_str].insert(rword4);
+			totalcap = updateMaps(barcode_str, lword1, lword2, lword3, lword4, rword1, rword2, 
+				rword3, rword4, lQueueMap, rQueueMap, totalcap);
 
 		}
 
 
 		if (totalcap > total_allowed) {
+			writeMapsToFile(lQueueMap, rQueueMap, outfile_set, outdirpath);
 			// Write all the data in the respective files sequentially
-			
-			for (auto& kv : lQueueMap) {
-				std::string barcode = kv.first;
-				std::set<std::string> valSet = kv.second;
-				const string file1 = outdirpath + "/" + barcode + "_1.fastq";
-				const string file2 = outdirpath + "/" + barcode + "_2.fastq";
-			
-				
-			}
-
-			
-
+			lQueueMap.clear();
+			rQueueMap.clear();
+			totalcap = 0;
 		}
 
 		distmap[smallest_dist]++;
-		lcount++;
-	
-
 	}
 
-	std::map<int, int>::iterator it;
+	// final writing to the files
+	if (totalcap > total_allowed) {
+		writeMapsToFile(lQueueMap, rQueueMap, outfile_set, outdirpath);
+		// Write all the data in the respective files sequentially
+		lQueueMap.clear();
+		rQueueMap.clear();
+		totalcap = 0;
+	}
 
-	for (it = distmap.begin(); it != distmap.end(); it++) {
-		std::cout << it->first
+
+	for (const auto& it : distmap) {
+		std::cout << it.first
 				<< ':'
-				<<it->second
+				<<it.second
 				<< std::endl;
 	}	
 
-	std::set<std::string>::iterator it2;
 	int lcount2 = 1;
-	for (it2 = barcode_set.begin(); it2 != barcode_set.end(); it2++) {
-		std::cout << lcount2++ << " " << *it2 << "\n";
+	for (const auto& it2 : barcode_set) {
+		std::cout << lcount2++ << " " << it2 << "\n";
 	}
         
     return 0;
