@@ -192,6 +192,11 @@ int main(int argc, char* argv[]) {
 	std::map<std::string, std::vector<std::string>> lQueueMap;
 	std::map<std::string, std::vector<std::string>> rQueueMap;
 
+
+	std::map<std::string, unsigned long> zero_dist_map;
+	std::map<std::string, unsigned long> one_dist_map;
+	std::map<std::string, unsigned long> higher_dist_map;
+
 	int barcode_start = 6;
 	int barcode_size = 6;
 
@@ -212,6 +217,15 @@ int main(int argc, char* argv[]) {
 	unsigned long total_allowed = allowed_GB * GB_SIZE;
 
 	unsigned long totalcap = 0;
+
+	unsigned long  match_total = 0;
+	unsigned long ambiguous_total = 0;
+	unsigned long no_match_total = 0;
+
+
+	const std::string logfile_detailed = outdirpath + "/logfile_detailed.txt";
+	std::ofstream log_detailed(logfile_detailed);
+	
 
 	// We shall start reading the first line. The assumption is that second line 
 	// contains the barcode.
@@ -256,8 +270,9 @@ int main(int argc, char* argv[]) {
 				smallest_count++;
 			}
 		}
-		std::cout << "actual_barcode: " << barcode_str << ", smallest barcode: " << smallest_barcode << 
+		log_detailed << "actual_barcode: " << barcode_str << ", smallest barcode: " << smallest_barcode << 
 				", smallest dist: " << smallest_dist << ", smallest_count: " << smallest_count << "\n";
+
 
 
 
@@ -268,10 +283,21 @@ int main(int argc, char* argv[]) {
 
 		if (smallest_count == 1) {
 			write_barcode = smallest_barcode;
+			if (smallest_dist == 0) {
+				zero_dist_map[write_barcode]++;
+			} else if (smallest_dist == 1) {
+				one_dist_map[write_barcode]++;
+			} else {
+				higher_dist_map[write_barcode]++;
+			}
+			match_total++;
+				
 		} else if (smallest_count > 0) {
 			write_barcode = "ambiguous";
+			ambiguous_total++;
 		} else {
 			write_barcode = "no_match";
+			no_match_total++;
 		}
 
 		barcode_set.insert(write_barcode);
@@ -309,6 +335,56 @@ int main(int argc, char* argv[]) {
 	for (const auto& it2 : barcode_set) {
 		std::cout << lcount2++ << " " << it2 << "\n";
 	}
+
+	// Writing the logs
+	const std::string logfile1 = outdirpath + "/frequency_logfile.txt";
+	std::ofstream log_freq(logfile1);
+
+	std::setprecision(2);
+
+	unsigned long total_reads = match_total + ambiguous_total + no_match_total;
+
+	double ambiguous_percent = ((double) ambiguous_total / (double) total_reads) * 100;
+	double no_match_percent = ((double) no_match_total / (double) total_reads) * 100;
+
+	log_freq << "Total reads: " << total_reads << "\n..................\n";
+
+	log_freq << "Ambiguous:\n";
+	log_freq << ".................." << "\n";
+	log_freq << "Total ambiguous reads: " << ambiguous_total << " (" << ambiguous_percent << "%)\n\n";
+
+	log_freq << "No match:\n";
+    log_freq << ".................." << "\n";
+    log_freq << "Total non-match reads: " << no_match_total << " (" << no_match_percent << "%)\n\n";
+
+
+	for (const auto& lbarcode : barcode_set) {
+
+		if (lbarcode == "ambiguous" || lbarcode == "no_match") {continue;}
+	
+		unsigned long zero_dist_count = zero_dist_map[lbarcode];
+		unsigned long one_dist_count = one_dist_map[lbarcode];
+		unsigned long higher_dist_count = higher_dist_map[lbarcode];
+
+		unsigned long total_correct_count = zero_dist_count + one_dist_count + higher_dist_count;
+		double zero_dist_percent = ((double)zero_dist_count / (double)total_correct_count) * 100.0;
+		double one_dist_percent = ((double)one_dist_count / (double)total_correct_count) * 100.0;
+		double higher_dist_percent = 100 - zero_dist_percent - one_dist_percent;
+		double barcode_read_percent = ((double)total_correct_count / (double)total_reads) * 100;  
+
+		log_freq << "Barcode: " << lbarcode << "\n";
+		log_freq << ".................." << "\n";
+		log_freq << "Zero base mismatch: " << zero_dist_percent << "%\n";
+		log_freq << "One base mismatch: " << one_dist_percent << "%\n";
+		log_freq << "Total read for this barcode: " << total_correct_count << " (percent of total reads: " << barcode_read_percent << "%)\n";
+		log_freq << "\n";
+
+	}
+
+
+	log_freq.close();
+	log_detailed.close();
+	
         
     return 0;
 }
