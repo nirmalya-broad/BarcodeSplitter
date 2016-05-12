@@ -2,18 +2,10 @@
     load_and_search.cpp
 	
 	By Nirmalya Bandyopadhyay 
-	adapted from 
-	---
-    By Stephen Holiday 2011
-    http://stephenholiday.com
-    (Exception, Distance Algorithm by Anders Sewerin Johansen)
-
-    The code is under the [Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0) license.
 
     This is a utility for loading a BKTree from a serialized file.
     
-    ./bkSearch [serialized tree] [word] [max edxit distance]
-    ./bkSearch bkTree.dat word 3
+    ./bkSearch [serialized tree] [file1] [file2] [max edxit distance] [output dir]
 
 */
 
@@ -188,13 +180,14 @@ int main(int argc, char* argv[]) {
 
 
 	// To avoid performance hit but keeping a large number of files open 
-	// and writing them in parallel, we have decide to maintain a queue
-	// of lines according to barcode. So, it reality, there would be
+	// and writing them in parallel, we have decided to maintain a queue
+	// of lines according to barcodes. So, it reality, there would be
 	// n number of queues where n is the number of barcodes.
-	// Once the total size of the queue reaches a predefined number such as
-	// 2 GB, we shall write the 75% or so to files. We shall open those files
-	// at that time sequentially. This is a sort of lazy update, I hope that
-	// it would provide good performence.
+	// Once the total size of the queue exceeds a predefined limit such as
+	// 2 GB, we shall write the queu to files. We shall open those files
+	// at that time sequentially, update them and close them sequentially. 
+	// This is a sort of lazy update, I hope that it would provide good 
+	// performence.
 
 	std::map<std::string, std::vector<std::string>> lQueueMap;
 	std::map<std::string, std::vector<std::string>> rQueueMap;
@@ -244,21 +237,48 @@ int main(int argc, char* argv[]) {
 
 		// calculate the minimum distance between the target and references
 
-		int smallest_dist = cutoff;
+		int smallest_dist = cutoff + 1;
+		std::string smallest_barcode = "JJJJJJ";
+
+		std::vector<int> dist_vec;
 		for (auto const& val : results) {
 			int ldist = distance(val, barcode_str);
 			if (ldist < smallest_dist) {
 				smallest_dist = ldist;
+				smallest_barcode = val;
+			}
+			dist_vec.push_back(ldist);
+		}
+
+		int smallest_count = 0;
+		for (auto const& temp_dist : dist_vec) {
+			if (temp_dist == smallest_dist) {
+				smallest_count++;
 			}
 		}
+		std::cout << "actual_barcode: " << barcode_str << ", smallest barcode: " << smallest_barcode << 
+				", smallest dist: " << smallest_dist << ", smallest_count: " << smallest_count << "\n";
 
-		if (smallest_dist == 0) {
-			barcode_set.insert(barcode_str);
-			totalcap = updateMaps(barcode_str, lword1, lword2, lword3, lword4, rword1, rword2, 
-				rword3, rword4, lQueueMap, rQueueMap, totalcap);
 
+
+		// So the smallest dist has to be unique, otherwise we shall put them in a file
+		// called unknown.
+
+		std::string write_barcode;
+
+		if (smallest_count == 1) {
+			write_barcode = smallest_barcode;
+		} else if (smallest_count > 0) {
+			write_barcode = "ambiguous";
+		} else {
+			write_barcode = "no_match";
 		}
 
+		barcode_set.insert(write_barcode);
+		totalcap = updateMaps(write_barcode, lword1, lword2, lword3, lword4, rword1, rword2, 
+			rword3, rword4, lQueueMap, rQueueMap, totalcap);
+			
+		//std::cout << "total cap: " << totalcap << "\n";
 
 		if (totalcap > total_allowed) {
 			writeMapsToFile(lQueueMap, rQueueMap, outfile_set, outdirpath);
@@ -272,13 +292,10 @@ int main(int argc, char* argv[]) {
 	}
 
 	// final writing to the files
-	if (totalcap > total_allowed) {
-		writeMapsToFile(lQueueMap, rQueueMap, outfile_set, outdirpath);
-		// Write all the data in the respective files sequentially
-		lQueueMap.clear();
-		rQueueMap.clear();
-		totalcap = 0;
-	}
+	writeMapsToFile(lQueueMap, rQueueMap, outfile_set, outdirpath);
+	lQueueMap.clear();
+	rQueueMap.clear();
+	totalcap = 0;
 
 
 	for (const auto& it : distmap) {
