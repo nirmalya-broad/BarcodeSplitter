@@ -274,8 +274,6 @@ int main(int argc, char* argv[]) {
 				", smallest dist: " << smallest_dist << ", smallest_count: " << smallest_count << "\n";
 
 
-
-
 		// So the smallest dist has to be unique, otherwise we shall put them in a file
 		// called unknown.
 
