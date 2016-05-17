@@ -3,7 +3,6 @@ CC = c++
 CFLAGS=-O2 -std=c++14
 
 INC = -I/usr/local/include/boost
-LIB=-L/usr/local/lib/
 BOOSTLIBS=/usr/local/lib/libboost_serialization.a /usr/local/lib/libboost_regex.a
 
 all: clean tools
