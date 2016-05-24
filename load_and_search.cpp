@@ -19,6 +19,7 @@
 #include <cstring>
 #include <set>
 
+
 #include "BKTree.h"
 
 #include <boost/archive/text_oarchive.hpp>
@@ -200,6 +201,10 @@ int main(int argc, char* argv[]) {
 	int barcode_start = 6;
 	int barcode_size = 6;
 
+
+	int umi_start = 0;
+	int umi_size = 6;
+
 	// The words starting with lword is for read 1
 	std::string lword1;
 	std::string lword2;
@@ -246,6 +251,7 @@ int main(int argc, char* argv[]) {
 		// The barcode stays at the second line of each four lines of first
 		// read file.
 		std::string barcode_str = lword2.substr(barcode_start, barcode_size);	
+		std::string umi_str = lword2.substr(umi_start, umi_size);
 	
 		std::vector<std::string> results = tree.find(barcode_str, cutoff);
 
@@ -299,7 +305,8 @@ int main(int argc, char* argv[]) {
 		}
 
 		barcode_set.insert(write_barcode);
-		totalcap = updateMaps(write_barcode, lword1, lword2, lword3, lword4, rword1, rword2, 
+		std::string rword1A = rword1 + ":" + umi_str;
+		totalcap = updateMaps(write_barcode, lword1, lword2, lword3, lword4, rword1A, rword2, 
 			rword3, rword4, lQueueMap, rQueueMap, totalcap);
 			
 		//std::cout << "total cap: " << totalcap << "\n";
