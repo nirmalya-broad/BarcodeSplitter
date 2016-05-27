@@ -91,7 +91,7 @@ void bc_splitter::initialize() {
 	struct stat st = {0};
 
 	if (stat(outdirpath.c_str(), &st) == -1) {
-		mkdir(outdirpath.c_str(), 0700);
+		mkdir(outdirpath.c_str(), 0755);
 	}
 }
 
