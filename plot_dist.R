@@ -1,8 +1,10 @@
+args = commandArgs(TRUE)
+arg1 <- args[1]
+name_str <- args[2]
+
 library(reshape2)
 library(ggplot2)
-args = commandArgs(trailingOnly=TRUE)
-arg1 <- args[1]
-#cat(arg1, '\n')
+cat(arg1, '\n')
 res <- readLines(arg1)
 lastBar <- ""
 lastZero <- 0.0
@@ -49,7 +51,8 @@ for (lstr in res) {
 freqMat1 <- freqMat[complete.cases(freqMat),]
 
 #rownames(freqMat) <- barVec
-plot_str <- strsplit(arg1, "\\.")[[1]][1]
+#plot_str <- strsplit(arg1, "\\.")[[1]][1]
+plot_str <- name_str
 colnames(freqMat1) <- c("barCode", "ZeroMM", "OneMM")
 freqMat2 <- melt(freqMat1, id = "barCode")
 cnames <- c("BarCode", "Mismatch", "PercentT")
