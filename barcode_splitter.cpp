@@ -74,6 +74,7 @@ class bc_splitter {
 
 void bc_splitter::print_help() {
     std::cout << desc << "\n";
+	std::cout << "Usage: bc_splitter -t allseq -d <dict_file> --file1 <file1> --file2 <file2> -o outdir\n\n";
 }
 
 
@@ -112,7 +113,7 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 			"Optional/Umi size")
 		("allowed-mb", po::value(&allowed_MB)->default_value(2048),
 			"Optional/Estimated memory requirement in MB.")
-		("dict_file,df", po::value<std::string>(&dict_file), "Dictionary file")
+		("dict_file,d", po::value<std::string>(&dict_file), "Dictionary file")
 		("file1", po::value<std::string>(&file1_str), "First file")
 		("file2", po::value<std::string>(&file2_str), "Second file")
 		("outdir,o", po::value<std::string>(&outdirpath), "Output directory")
@@ -124,6 +125,7 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 
 	
 	if (vm.count("help")) {
+		print_help();
         return 0;
     }
 
@@ -131,7 +133,7 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 		boost::to_lower(ltype);
 		boost::trim(ltype);
 		// check the ltype
-		std::cout << "Here: " << ltype << "\n";
+		std::cout << "Type is set to: " << ltype << "\n";
 		if (ltype.compare("allseq") == 0) {
 			// Let the default values for barcode and umi
 			validUmi = true;
@@ -146,11 +148,11 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 			std::cout << "Note! The user need to set the variables for" <<
 			"barcode_start, barcode_size, umi_start, umi_size\n";
 		} else {
-			std::cout << "Invalid type option.\n";
+			std::cout << "Error: Invalid type option.\n";
 			all_set = false;
 		}
 	} else {
-		std::cout << "Type not set.";
+		std::cout << "Error: Type not set.";
 		all_set = false;
 	}
 
@@ -164,21 +166,28 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 		std::cout << "First fastq file is set to: " << file1_str << ".\n";
 	} else {
 		all_set = false;
-		std::cout << "First fastq file is not set.\n";
+		std::cout << "Error: First fastq file is not set.\n";
 	}
 
 	if (vm.count("file2")) {
 		std::cout << "Second fastq file is set to: " << file2_str << ".\n";
 	} else {
 		all_set = false;
-		std::cout << "Second fastq file is not set.\n";
+		std::cout << "Error: Second fastq file is not set.\n";
+	}
+
+	if (vm.count("dict_file")) {
+		std::cout << "Dict_file is set to " << dict_file << ".\n";
+	} else {
+		all_set = false;
+		std::cout << "Error: Dict_file is not set.\n";
 	}
 
 	if (vm.count("outdir")) {
 		std::cout << "Outdir is set to: " << outdirpath << ".\n";
 	} else {
 		all_set = false;
-		std::cout << "Outdir is not set.\n";
+		std::cout << "Error: Outdir is not set.\n";
 	}
 	
 	return all_set;
@@ -508,11 +517,11 @@ int main(int argc, char* argv[]) {
 		all_set = lbs.parse_args(argc, argv);	
 	} catch(std::exception& e) {
 		std::cerr << "error: " << e.what() << "\n";
-        lbs.print_help();
+        //lbs.print_help();
         return 1;
 
 	} catch (...) {
-		lbs.print_help();
+		//lbs.print_help();
 		return 0;
 	}
 

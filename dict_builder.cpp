@@ -40,7 +40,7 @@ class dict_builder{
 
 void dict_builder::print_help() {
 	std::cout << desc << "\n";
-    std::cout << "usage: bkLoad -i <infile> -o <outfile> -t <type>\n\n";
+    std::cout << "Usage: dict_builder -i <infile> -o <outfile> -t <type>\n\n";
 }
 
 dict_builder::dict_builder() {
@@ -110,6 +110,7 @@ bool dict_builder::build_tree_complex() {
 
 bool dict_builder::parse_args(int argc, char* argv[]) {
 	 bool all_set = true;
+	 bool none_set = true;
 
     desc.add_options()
         ("help,h", "produce help mesage")
@@ -123,13 +124,16 @@ bool dict_builder::parse_args(int argc, char* argv[]) {
     po::notify(vm);
 
     if (vm.count("help")) {
+		print_help();
         return 0;
     }
 
     if (!vm.count("infile")) {
         std::cout << "Infile not set.\n";
         all_set = false;
+		
     } else {
+		
         std::cout << "Infile is set to: " << infile << ".\n";
     }
 
@@ -159,12 +163,12 @@ int main(int argc, char* argv[]) {
 		all_set = ldict.parse_args(argc, argv);
 	} catch(std::exception& e) {
        	std::cerr << "error: " << e.what() << "\n";
-		ldict.print_help();
+		//ldict.print_help();
        	return 1;
    	}
    	catch(...) {
        	std::cerr << "Exception of unknown type!\n";
-		ldict.print_help();
+		//ldict.print_help();
    	}
 
 	if (!all_set) {
