@@ -52,6 +52,7 @@ class bc_splitter {
 	int umi_start;
 	int umi_size;
 	int allowed_MB;
+	std::string bc_used_file;
 	std::map<std::string, std::vector<std::string>> lQueueMap;
     std::map<std::string, std::vector<std::string>> rQueueMap;
 	std::set<std::string> barcode_set;
@@ -62,6 +63,7 @@ class bc_splitter {
     BKTree<std::string> tree;
 	po::options_description desc;
 	std::map<int, int> distmap;
+	std::set<std::string> used_barcodes;
 
 	unsigned long totalcap = 0;
 	unsigned long  match_total = 0;
@@ -100,6 +102,7 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 	bool all_set = true;
 	desc.add_options()
 		("help,h", "produce help message")
+		//("bc-used", po::value(&bc_used_file), "Optional/File of used barcodes")
 		("mismatch,m", po::value(&cutoff)->default_value(1), 
 			"Optional/Maximum allowed mismatches.")
 		("bc-start", po::value(&barcode_start)->default_value(6), 
@@ -113,7 +116,7 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 			"Optional/Umi size")
 		("allowed-mb", po::value(&allowed_MB)->default_value(2048),
 			"Optional/Estimated memory requirement in MB.")
-		("dict_file,d", po::value<std::string>(&dict_file), "Dictionary file")
+		("dict-file,d", po::value<std::string>(&dict_file), "Dictionary file")
 		("file1", po::value<std::string>(&file1_str), "First file")
 		("file2", po::value<std::string>(&file2_str), "Second file")
 		("outdir,o", po::value<std::string>(&outdirpath), "Output directory")
@@ -125,9 +128,11 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 
 	
 	if (vm.count("help")) {
-		print_help();
+		//print_help();
         return 0;
-    }
+    }else {
+		//all_set = false;
+	}
 
 	if (vm.count("type")) {
 		boost::to_lower(ltype);
@@ -152,7 +157,7 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 			all_set = false;
 		}
 	} else {
-		std::cout << "Error: Type not set.";
+		std::cout << "Error: Type not set.\n";
 		all_set = false;
 	}
 
@@ -176,7 +181,7 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 		std::cout << "Error: Second fastq file is not set.\n";
 	}
 
-	if (vm.count("dict_file")) {
+	if (vm.count("dict-file")) {
 		std::cout << "Dict_file is set to " << dict_file << ".\n";
 	} else {
 		all_set = false;

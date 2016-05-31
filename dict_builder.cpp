@@ -20,8 +20,7 @@ class dict_builder{
 
 	public:
 	bool parse_args(int argc, char* argv[]);
-	bool build_tree_simple();
-	bool build_tree_complex();
+	bool build_tree();
 	void save_tree();
 	std::string& get_type();
 	void print_help();
@@ -40,7 +39,7 @@ class dict_builder{
 
 void dict_builder::print_help() {
 	std::cout << desc << "\n";
-    std::cout << "Usage: dict_builder -i <infile> -o <outfile> -t <type>\n\n";
+    std::cout << "Usage: dict_builder -i <infile> -o <outfile>\n\n";
 }
 
 dict_builder::dict_builder() {
@@ -55,16 +54,23 @@ dict_builder::~dict_builder() {
 	// Nothing yet	
 }
 
-bool dict_builder::build_tree_simple() {
+bool dict_builder::build_tree() {
 	std::ifstream words(infile);
 	std::string lstr;
-
+	boost::regex expr ("(\\w+)\\s+(\\w+)");
+	boost::smatch what;
 	if (!words.is_open()) {
     	std::cerr << "The infile cannot be open!\n";
 		return false;
 	} else {
+		
 		while (std::getline(words, lstr)) {
-			tree.insert(lstr);
+			bool res = boost::regex_search(lstr, what, expr);
+			if (res) {
+				std::string seq = what[1];
+				std::string barcode = what[2];
+				tree.insert(barcode);
+			}
 		}
 	}
 	std::cout<< "Loaded " <<tree.size()<< " entries" << std::endl;
@@ -80,34 +86,6 @@ void dict_builder::save_tree() {
 	return;
 }
 
-
-bool dict_builder::build_tree_complex() {
- std::ifstream words (infile);
-    std::string str;
-    
-    boost::regex expr ("NNNNNN(\\w{6})");
-	boost::smatch what;	
-    
-    if (!words.is_open()) {
-    	std::cerr << "The infile cannot be open!\n";
-		return false;
-    }
-    else {
-        while(std::getline(words, str)) {
-				
-			// Extract the six bases from each of the line after NNNNNN
-			bool res = boost::regex_search(str, what, expr);
-			if (res) {				
-				std::string lstr = what[1];
-        		tree.insert(lstr);
-			}
-		}
-    }
-    
-    std::cout<<"Loaded "<<tree.size()<< " entries"<<std::endl;
-	return true;
-}
-
 bool dict_builder::parse_args(int argc, char* argv[]) {
 	 bool all_set = true;
 	 bool none_set = true;
@@ -116,7 +94,6 @@ bool dict_builder::parse_args(int argc, char* argv[]) {
         ("help,h", "produce help mesage")
         ("infile,i", po::value<std::string>(&infile), "Input file")
         ("outfile,o", po::value<std::string>(&outfile), "Output file")
-		("type,t", po::value<std::string>(&ltype), "Input file type: complex/simple")
     ;
 
     po::variables_map vm;
@@ -124,9 +101,11 @@ bool dict_builder::parse_args(int argc, char* argv[]) {
     po::notify(vm);
 
     if (vm.count("help")) {
-		print_help();
+		//print_help();
         return 0;
-    }
+    } else {
+		//all_set =false;
+	}
 
     if (!vm.count("infile")) {
         std::cout << "Infile not set.\n";
@@ -143,12 +122,6 @@ bool dict_builder::parse_args(int argc, char* argv[]) {
     } else {
         std::cout << "Outfile is set to: " << outfile << ".\n";
     }
-
-	if (!vm.count("type")) {
-		std::cout << "Type not set.\n";
-	} else {
-		std::cout << "Type set to: " << ltype << ".\n";
-	}
 
 	return all_set;
 }
@@ -176,14 +149,8 @@ int main(int argc, char* argv[]) {
 		return 0;
 	}
 
-	std::string ltype = ldict.get_type();
-	if (ltype.compare("simple") == 0) {
-		ldict.build_tree_simple();
-	} else if (ltype.compare("complex") == 0) {
-		ldict.build_tree_complex();
-	} else {
-		std::cerr << "Invalid type: " << ltype << ".\n";
-	}
+	ldict.build_tree();
+
 	ldict.save_tree();
         
     return 0;
