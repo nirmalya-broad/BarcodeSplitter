@@ -20,8 +20,8 @@ class dict_builder{
 
 	public:
 	bool parse_args(int argc, char* argv[]);
-	bool build_tree();
-	void save_tree();
+	bool build_data();
+	void save_data();
 	std::string& get_type();
 	void print_help();
 	dict_builder();
@@ -35,6 +35,15 @@ class dict_builder{
     po::options_description desc;
 
 };
+
+class my_exception : public std::exception {
+    public:
+    my_exception(const std::string& msg) : msg_(msg) {}
+    const char* what(); // override what to return msg_;
+    private:
+    std::string msg_;
+};
+
 
 
 void dict_builder::print_help() {
@@ -54,7 +63,7 @@ dict_builder::~dict_builder() {
 	// Nothing yet	
 }
 
-bool dict_builder::build_tree() {
+bool dict_builder::build_data() {
 	std::ifstream words(infile);
 	std::string lstr;
 	boost::regex expr ("(\\w+)\\s+(\\w+)");
@@ -70,6 +79,8 @@ bool dict_builder::build_tree() {
 				std::string seq = what[1];
 				std::string barcode = what[2];
 				tree.insert(barcode);
+			} else {
+				throw my_exception("Problem in the parsing the barcode lines.\n");
 			}
 		}
 	}
@@ -77,7 +88,7 @@ bool dict_builder::build_tree() {
 	return true;
 }
 
-void dict_builder::save_tree() {
+void dict_builder::save_data() {
     
 	std::ofstream ofs(outfile);
     boost::archive::text_oarchive oa(ofs);
@@ -149,9 +160,9 @@ int main(int argc, char* argv[]) {
 		return 0;
 	}
 
-	ldict.build_tree();
+	ldict.build_data();
 
-	ldict.save_tree();
+	ldict.save_data();
         
     return 0;
 }

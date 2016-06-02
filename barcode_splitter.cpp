@@ -21,6 +21,12 @@ namespace po = boost::program_options;
 #include <sys/types.h>
 #include <unistd.h>
 
+struct classcomp {
+	bool operator() (const double lhs, const double rhs) const {
+		return rhs > lhs;
+	}
+};
+
 class bc_splitter {
 
 	public:
@@ -53,6 +59,7 @@ class bc_splitter {
 	int umi_size;
 	int allowed_MB;
 	std::string bc_used_file;
+	std::string bc_all_file;
 	std::map<std::string, std::vector<std::string>> lQueueMap;
     std::map<std::string, std::vector<std::string>> rQueueMap;
 	std::set<std::string> barcode_set;
@@ -63,6 +70,8 @@ class bc_splitter {
     BKTree<std::string> tree;
 	po::options_description desc;
 	std::map<int, int> distmap;
+	std::multimap<double, std::string, classcomp> bar_map;
+	std::map<int, std::string> barseq_map;
 	std::set<std::string> used_barcodes;
 
 	unsigned long totalcap = 0;
@@ -71,12 +80,24 @@ class bc_splitter {
 	unsigned long no_match_total = 0;
 
 	bool validUmi = false;
+	bool isBcAll = true;
+	bool isHA = false;
 
 };
 
+class my_exception : public std::exception {
+	public:
+ 	my_exception(const std::string& msg) : msg_(msg) {}
+	const char* what(); // override what to return msg_;
+	private:
+    std::string msg_;
+};
+
+
 void bc_splitter::print_help() {
     std::cout << desc << "\n";
-	std::cout << "Usage: bc_splitter -t allseq -d <dict_file> --file1 <file1> --file2 <file2> -o outdir\n\n";
+	std::cout << "Usage: bc_splitter -t allseq -d <dict_file> --file1 <file1> --file2 <file2>"
+			" -o outdir\n\n";
 }
 
 
@@ -102,24 +123,26 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 	bool all_set = true;
 	desc.add_options()
 		("help,h", "produce help message")
-		//("bc-used", po::value(&bc_used_file), "Optional/File of used barcodes")
+		("type,t", po::value(&ltype), "allseq/rnatagseq")
+		("dict-file,d", po::value<std::string>(&dict_file), "Dictionary file")
+		("file1", po::value<std::string>(&file1_str), "First file")
+		("file2", po::value<std::string>(&file2_str), "Second file")
+		("outdir,o", po::value<std::string>(&outdirpath), "Output directory")
+		("ha", "Optional/Highlight all barcodes")
+		("bc-all", po::value(&bc_all_file), "Optional/File of all barcodes")
+		("bc-used", po::value(&bc_used_file), "Optional/File of used barcodes")
 		("mismatch,m", po::value(&cutoff)->default_value(1), 
 			"Optional/Maximum allowed mismatches.")
 		("bc-start", po::value(&barcode_start)->default_value(6), 
 			"Optional/Barcode start position")
 		("bc-size", po::value(&barcode_size)->default_value(6), 
 			"Optional/Barcode size")
-		("type,t", po::value(&ltype), "allseq/rnatagseq")
 		("umi-start", po::value(&umi_start)->default_value(0), 
 			"Optional/Umi start position")
 		("umi-size", po::value(&umi_size)->default_value(6), 
 			"Optional/Umi size")
 		("allowed-mb", po::value(&allowed_MB)->default_value(2048),
 			"Optional/Estimated memory requirement in MB.")
-		("dict-file,d", po::value<std::string>(&dict_file), "Dictionary file")
-		("file1", po::value<std::string>(&file1_str), "First file")
-		("file2", po::value<std::string>(&file2_str), "Second file")
-		("outdir,o", po::value<std::string>(&outdirpath), "Output directory")
 	;
 
 	po::variables_map vm;
@@ -166,6 +189,64 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 	std::cout << "Umi-size is set to " << umi_size << ".\n";
 	std::cout << "Barcode-start is set to " << barcode_start << ".\n";
 	std::cout << "Barcode-size is set to " << barcode_size << ".\n";
+
+	int bc_a = vm.count("bc-all");
+	int bc_u = vm.count("bc-used");
+	
+	if (bc_a && bc_u) {
+		std::cout << "bc-all set to " << bc_all_file << ".\n";
+		std::cout << "bc-used set to " << bc_used_file << ".\n";
+		isBcAll = false;
+	} else if ((bc_a && !bc_u) || (!bc_a && bc_u)) {
+		all_set = false;
+		std::cout << "Error: bc-all and bc-used to be set together.\n";
+	} 				
+
+	if (!isBcAll) {
+		// Load the seq and parameters in a map
+		std::ifstream words(bc_all_file);
+		std::string lstr;
+    	boost::regex expr ("(\\w+)\\s+(\\w+)");
+   		boost::smatch what;
+   		if (!words.is_open()) {
+        	std::string err_str = "The bc_all_file cannot be open!\n";
+			std::cout << err_str;
+			throw my_exception(err_str);
+			
+    	} else {
+
+        	while (std::getline(words, lstr)) {
+            	bool res = boost::regex_search(lstr, what, expr);
+            	if (res) {
+                	std::string seq = what[1];
+                	std::string barcode = what[2];
+					int seq_int = atoi(seq.c_str());
+                	barseq_map.insert(std::pair<int, std::string>(seq_int, barcode));
+            	}
+        	}
+    	}
+
+		// Now get the numbers from bc_used_file
+		
+		std::ifstream seqs(bc_used_file);
+		std::string seq_str;
+		if (!seqs.is_open()) {
+			std::string err_string = "The bc_all_file cannot be open!\n";
+			std::cout << err_string;
+			throw my_exception(err_string);
+		} else {
+			while (std::getline(seqs, seq_str)) {
+				int seq_int = atoi(seq_str.c_str());
+				// Insert in into barcode_used
+				std::string lused = barseq_map[seq_int];
+				used_barcodes.insert(lused);
+			}
+		}
+	} else if (vm.count("ha")) {
+		// Highlight all barcodes
+		isHA = true;
+	}
+
 
 	if (vm.count("file1")) {
 		std::cout << "First fastq file is set to: " << file1_str << ".\n";
@@ -267,8 +348,8 @@ void bc_splitter::writeMapsToFile() {
 	for (auto& kv : lQueueMap) {
 	    std::string barcode = kv.first;
 
-        const std::string file1 = outdirpath + "/" + barcode + "_1.fastq";
-        const std::string file2 = outdirpath + "/" + barcode + "_2.fastq";
+        const std::string file1 = outdirpath + "/" + barcode + "_R1.fastq";
+        const std::string file2 = outdirpath + "/" + barcode + "_R2.fastq";
 
         std::ofstream ofs1;
         std::ofstream ofs2;
@@ -321,6 +402,7 @@ void bc_splitter::split_engine() {
 	std::string rword3;
 	std::string rword4;
 
+
 	for (int j = 0; j <= cutoff; j++) {
 		distmap[j] = 0;
 	}   
@@ -369,6 +451,7 @@ void bc_splitter::split_engine() {
 				smallest_dist = ldist;
 				smallest_barcode = val;
 			}
+
 			dist_vec.push_back(ldist);
 		}
 
@@ -412,7 +495,26 @@ void bc_splitter::split_engine() {
 		// Adding umi_string to the output file.	
 		std::string rword1A;
 		if (validUmi) {
-			rword1A = rword1 + ":" + umi_str;
+
+			// Split the read one, if there is to split
+			boost::regex expr ("(\\S+)\\s*(\\S*)");
+			boost::smatch what;
+			bool res = boost::regex_search(rword1, what, expr);
+			std::string hpart1;
+			std::string hpart2 = "";
+			if (res) {
+				hpart1 = what[1];
+				hpart2 = what[2];
+
+				if (hpart2.compare("") == 0) {	
+					rword1A = hpart1 + ":" + umi_str;
+				} else {
+					rword1A = hpart1 + ":" + umi_str + " " + hpart2;
+				}
+			} else {
+				std::cout << "Problem in the UMI parser " << rword1 << "\n";
+				throw my_exception("Problem in the UMI parser.");
+			}
 		} else {
 			rword1A = rword1;
 		}
@@ -433,19 +535,6 @@ void bc_splitter::split_engine() {
 
 	// final writing to the files
 	writeMapsToFile();
-	totalcap = 0;
-
-	for (const auto& it : distmap) {
-		std::cout << it.first
-				<< ':'
-				<<it.second
-				<< std::endl;
-	}	
-
-	int lcount2 = 1;
-	for (const auto& it2 : barcode_set) {
-		std::cout << lcount2++ << " " << it2 << "\n";
-	}
 
 	//log_detailed.close();
 }
@@ -489,17 +578,38 @@ void bc_splitter::write_log() {
 		double higher_dist_percent = 100 - zero_dist_percent - one_dist_percent;
 		double barcode_read_percent = ((double)total_correct_count / (double)total_reads) * 100;  
 
-		log_freq << "Barcode: " << lbarcode << "\n";
+		std::string lbarcode2;
+		if (used_barcodes.count(lbarcode) > 0) {
+			lbarcode2 = lbarcode + "-*";
+		} else if (isHA) {
+			lbarcode2 = lbarcode + "-*";
+		} else {
+			lbarcode2 = lbarcode;
+		}
+  		
+		log_freq << "Barcode: " << lbarcode2 << "\n";
 		log_freq << ".................." << "\n";
 		log_freq << "Zero base mismatch: " << zero_dist_percent << "%\n";
 		log_freq << "One base mismatch: " << one_dist_percent << "%\n";
 		log_freq << "Total read for this barcode: " << total_correct_count << 
 			" (percent of total reads: " << barcode_read_percent << "%)\n";
 		log_freq << "\n";
+		bar_map.insert(std::pair<double, std::string>(barcode_read_percent, lbarcode2));
 
 	}
 
 	log_freq.close();
+
+	std::cout << std::fixed;
+    std::cout << std::setprecision(4);	
+
+	for (auto& entry : bar_map) {
+		
+		std::cout << entry.second << ": " << entry.first << "%\n";
+	}
+
+	std::cout << "Ambiguous: " << ambiguous_percent << "%\n";
+	std::cout << "No-match: " << no_match_percent << "%\n";
 }
 
 
