@@ -100,23 +100,23 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 	bool all_set = true;
 	desc.add_options()
 		("help,h", "produce help message")
-		("mismatch,m", po::value(&cutoff)->default_value(1), 
-			"Optional/Maximum allowed mismatches.")
+		("type,t", po::value(&ltype), "allseq/rnatagseq")
+		("dict_file,d", po::value<std::string>(&dict_file), "Dictionary file")
 		("bc-start", po::value(&barcode_start)->default_value(6), 
 			"Optional/Barcode start position")
 		("bc-size", po::value(&barcode_size)->default_value(6), 
 			"Optional/Barcode size")
-		("type,t", po::value(&ltype), "allseq/rnatagseq")
+		("file1", po::value<std::string>(&file1_str), "First file")
+		("file2", po::value<std::string>(&file2_str), "Second file")
+		("outdir,o", po::value<std::string>(&outdirpath), "Output directory")
+		("mismatch,m", po::value(&cutoff)->default_value(1), 
+			"Optional/Maximum allowed mismatches.")
 		("umi-start", po::value(&umi_start)->default_value(0), 
 			"Optional/Umi start position")
 		("umi-size", po::value(&umi_size)->default_value(6), 
 			"Optional/Umi size")
 		("allowed-mb", po::value(&allowed_MB)->default_value(2048),
 			"Optional/Estimated memory requirement in MB.")
-		("dict_file,d", po::value<std::string>(&dict_file), "Dictionary file")
-		("file1", po::value<std::string>(&file1_str), "First file")
-		("file2", po::value<std::string>(&file2_str), "Second file")
-		("outdir,o", po::value<std::string>(&outdirpath), "Output directory")
 	;
 
 	po::variables_map vm;
