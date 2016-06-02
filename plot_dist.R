@@ -1,11 +1,11 @@
 args = commandArgs(TRUE)
-arg1 <- args[1]
-name_str <- args[2]
+infile <- args[1]
+outfile <- args[2]
+name_str <- args[3]
 
 library(reshape2)
 library(ggplot2)
-cat(arg1, '\n')
-res <- readLines(arg1)
+res <- readLines(infile)
 lastBar <- ""
 lastZero <- 0.0
 lastOne <- 0.0
@@ -65,6 +65,6 @@ lplot <- ggplot(data=freqMat2, aes(x=reorder(BarCode, -PercentT), y=PercentT,
 	theme(axis.text.x = element_text(size = 4, angle = 90, hjust = 1), 
 	legend.position = c(0.9, 0.9))
 
-plotname <- paste0(plot_str, ".pdf")
-ggsave(plotname, lplot)
+#plotname <- paste0(plot_str, ".pdf")
+ggsave(outfile, lplot)
 #cat(totalP, "\n")
