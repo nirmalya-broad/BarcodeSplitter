@@ -11,7 +11,7 @@
 
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
-#include <boost/regex.hpp>
+#include <regex>
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
@@ -66,15 +66,15 @@ dict_builder::~dict_builder() {
 bool dict_builder::build_data() {
 	std::ifstream words(infile);
 	std::string lstr;
-	boost::regex expr ("(\\w+)\\s+(\\w+)");
-	boost::smatch what;
+	std::regex expr ("(\\w+)\\s+(\\w+)");
+	std::smatch what;
 	if (!words.is_open()) {
     	std::cerr << "The infile cannot be open!\n";
 		return false;
 	} else {
 		
 		while (std::getline(words, lstr)) {
-			bool res = boost::regex_search(lstr, what, expr);
+			bool res = std::regex_search(lstr, what, expr);
 			if (res) {
 				std::string seq = what[1];
 				std::string barcode = what[2];

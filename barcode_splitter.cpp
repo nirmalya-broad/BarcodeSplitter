@@ -6,12 +6,12 @@
 #include <cstdlib> 
 #include <cstring>
 #include <set>
+#include <regex>
 
 #include "BKTree.h"
 
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
-#include <boost/regex.hpp>
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
 
@@ -206,8 +206,8 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 		// Load the seq and parameters in a map
 		std::ifstream words(bc_all_file);
 		std::string lstr;
-    	boost::regex expr ("(\\w+)\\s+(\\w+)");
-   		boost::smatch what;
+    	std::regex expr ("(\\w+)\\s+(\\w+)");
+   		std::smatch what;
    		if (!words.is_open()) {
         	std::string err_str = "The bc_all_file cannot be open!\n";
 			std::cout << err_str;
@@ -216,7 +216,7 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
     	} else {
 
         	while (std::getline(words, lstr)) {
-            	bool res = boost::regex_search(lstr, what, expr);
+            	bool res = std::regex_search(lstr, what, expr);
             	if (res) {
                 	std::string seq = what[1];
                 	std::string barcode = what[2];
@@ -497,9 +497,9 @@ void bc_splitter::split_engine() {
 		if (validUmi) {
 
 			// Split the read one, if there is to split
-			boost::regex expr ("(\\S+)\\s*(\\S*)");
-			boost::smatch what;
-			bool res = boost::regex_search(rword1, what, expr);
+			std::regex expr ("(\\S+)\\s*(\\S*)");
+			std::smatch what;
+			bool res = std::regex_search(rword1, what, expr);
 			std::string hpart1;
 			std::string hpart2 = "";
 			if (res) {
