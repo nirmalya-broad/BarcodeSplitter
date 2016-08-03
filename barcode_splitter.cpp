@@ -52,6 +52,7 @@ class bc_splitter {
 	std::string dict_file;
 	std::string file1_str;
 	std::string file2_str;
+	std::string prefix_str;
 	std::string outdirpath;
 	int barcode_start;
 	int barcode_size;
@@ -97,7 +98,7 @@ class my_exception : public std::exception {
 void bc_splitter::print_help() {
     std::cout << desc << "\n";
 	std::cout << "Usage: bc_splitter -t allseq -d <dict_file> --file1 <file1> --file2 <file2>"
-			" -o outdir\n\n";
+			" -p <prefix_str> -o <outdir>\n\n";
 }
 
 
@@ -127,10 +128,11 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 		("dict-file,d", po::value<std::string>(&dict_file), "Dictionary file")
 		("file1", po::value<std::string>(&file1_str), "First file")
 		("file2", po::value<std::string>(&file2_str), "Second file")
+		("prefix,p", po::value<std::string>(&prefix_str), "Prefix string")
 		("outdir,o", po::value<std::string>(&outdirpath), "Output directory")
 		("ha", "Optional/Highlight all barcodes")
 		("bc-all", po::value(&bc_all_file), "Optional/File of all barcodes")
-		("bc-used", po::value(&bc_used_file), "Optional/File of used barcodes")
+		("bc-used", po::value(&bc_used_file), "Optional/File of used barcodes, one number per line")
 		("mismatch,m", po::value(&cutoff)->default_value(1), 
 			"Optional/Maximum allowed mismatches.")
 		("bc-start", po::value(&barcode_start)->default_value(6), 
@@ -262,6 +264,13 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 		std::cout << "Error: Second fastq file is not set.\n";
 	}
 
+
+	if (vm.count("prefix")) {
+		std::cout << "Prefix string is set to: " << prefix_str << ".\n";
+	} else {
+		std::cout << "Error: Prefix string is not set.\n";
+	}
+
 	if (vm.count("dict-file")) {
 		std::cout << "Dict_file is set to " << dict_file << ".\n";
 	} else {
@@ -348,8 +357,8 @@ void bc_splitter::writeMapsToFile() {
 	for (auto& kv : lQueueMap) {
 	    std::string barcode = kv.first;
 
-        const std::string file1 = outdirpath + "/" + barcode + "_R1.fastq";
-        const std::string file2 = outdirpath + "/" + barcode + "_R2.fastq";
+        const std::string file1 = outdirpath + "/" + prefix_str + "_" + barcode + "_R1.fastq";
+        const std::string file2 = outdirpath + "/" + prefix_str + "_" + barcode + "_R2.fastq";
 
         std::ofstream ofs1;
         std::ofstream ofs2;
@@ -543,7 +552,7 @@ void bc_splitter::split_engine() {
 void bc_splitter::write_log() {
 
 	// Writing the logs
-	const std::string logfile1 = outdirpath + "/frequency_logfile.txt";
+	const std::string logfile1 = outdirpath + "/" + prefix_str + "_frequency_logfile.txt";
 	std::ofstream log_freq(logfile1);
 
 	std::setprecision(2);
