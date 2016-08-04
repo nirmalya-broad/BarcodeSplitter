@@ -6,6 +6,7 @@
 #include <cstdlib> 
 #include <cstring>
 #include <set>
+#include <cctype>
 
 #include "BKTree.h"
 
@@ -45,6 +46,11 @@ class bc_splitter {
 	BKTree<std::string>& getTree();
 	void initialize();
 	void print_help();
+	bool isAlpha(const std::string &str);
+	bool isNumber(const std::string& str);
+	bool load_with_barcode_seqs(const std::string& bc_used_file);
+	bool load_with_barcode_indices(const std::string& bc_all_file, 
+		const std::string& bc_used_file);
 
 	private:
 	int cutoff;
@@ -120,6 +126,105 @@ void bc_splitter::initialize() {
 	}
 }
 
+bool bc_splitter::isAlpha(const std::string& str) {
+    for(int i = 0; i < str.size(); i++)
+        if(!isalpha(str[i]))
+            return false;
+    return true;
+}
+
+bool bc_splitter::isNumber(const std::string& str) {
+	for (int i = 0; i < str.size(); i++)
+		if (!isdigit(str[i]))
+			return false;
+	return true;
+}
+
+bool bc_splitter::load_with_barcode_seqs(const std::string& bc_used_file) {
+	bool all_set = true;
+	std::ifstream seqs(bc_used_file);
+    std::string seq_str;
+   	if (!seqs.is_open()) {
+       	std::string err_string = "The bc_all_file cannot be open!\n";
+        std::cout << err_string;
+        throw my_exception(err_string);
+    } else {
+        while (std::getline(seqs, seq_str)) {
+        	bool varAlpha = isAlpha(seq_str);
+            if (!varAlpha) {
+                std::cout << "\nError:\nEither use barcode sequence in the file"
+                    "with the bc_used option.\n"
+                    "Or set both bc-all and bc-used options.\n\n";
+                all_set = false;
+                break;
+
+            }
+            used_barcodes.insert(seq_str);
+        }
+		if (all_set) {
+        	std::cout << "bc-used set to " << bc_used_file << ".\n";
+		}
+	}
+	return all_set;
+}
+
+bool bc_splitter::load_with_barcode_indices(const std::string& bc_all_file, 
+		const std::string& bc_used_file) {
+
+	bool all_set = true;
+	std::ifstream words(bc_all_file);
+    std::string lstr;
+    boost::regex expr ("(\\w+)\\s+(\\w+)");
+	boost::smatch what;
+    if (!words.is_open()) {
+    	std::string err_str = "The bc_all_file cannot be open!\n";
+        std::cout << err_str;
+        throw my_exception(err_str);
+
+	} else {
+
+		while (std::getline(words, lstr)) {
+        	bool res = boost::regex_search(lstr, what, expr);
+            if (res) {
+            	std::string seq = what[1];
+                std::string barcode = what[2];
+                int seq_int = atoi(seq.c_str());
+                barseq_map.insert(std::pair<int, std::string>(seq_int, barcode));
+            }
+        }
+    }
+
+    std::ifstream seqs(bc_used_file);
+	std::string seq_str;
+	if (!seqs.is_open()) {
+		std::string err_string = "The bc_used_file cannot be open!\n";
+		std::cout << err_string;
+		throw my_exception(err_string);
+	} else {
+		while (std::getline(seqs, seq_str)) {
+			if (!isNumber(seq_str)) {
+				std::cout << "\nError:\nEither use barcode position in the " 
+					"bc-used file along with bc-all.\n"
+                    "Or set only bc-used option with used barcode sequences.\n";
+                all_set = false;
+                break;
+
+			}
+			int seq_int = atoi(seq_str.c_str());
+			std::string lused = barseq_map[seq_int];
+			used_barcodes.insert(lused);
+		}
+	}
+
+	if (all_set) {
+        std::cout << "bc-used set to " << bc_used_file << ".\n";
+		std::cout << "bc-all set to " << bc_all_file << ".\n";
+    }
+
+	return all_set;
+}
+
+
 bool bc_splitter::parse_args(int argc, char* argv[]) {
 	bool all_set = true;
 	desc.add_options()
@@ -129,7 +234,7 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 		("file1", po::value<std::string>(&file1_str), "First file")
 		("file2", po::value<std::string>(&file2_str), "Second file")
 		("prefix,p", po::value<std::string>(&prefix_str), "Prefix string")
-		("outdir,o", po::value<std::string>(&outdirpath), "Output directory")
+		("outdir,o", po::value<std::string>(&outdirpath), "Output directory")	
 		("ha", "Optional/Highlight all barcodes")
 		("bc-all", po::value(&bc_all_file), "Optional/File of all barcodes")
 		("bc-used", po::value(&bc_used_file), "Optional/File of used barcodes, one number per line")
@@ -194,61 +299,40 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 
 	int bc_a = vm.count("bc-all");
 	int bc_u = vm.count("bc-used");
-	
-	if (bc_a && bc_u) {
-		std::cout << "bc-all set to " << bc_all_file << ".\n";
-		std::cout << "bc-used set to " << bc_used_file << ".\n";
-		isBcAll = false;
-	} else if ((bc_a && !bc_u) || (!bc_a && bc_u)) {
-		all_set = false;
-		std::cout << "Error: bc-all and bc-used to be set together.\n";
-	} 				
+	isHA = vm.count("ha") ;
 
-	if (!isBcAll) {
-		// Load the seq and parameters in a map
-		std::ifstream words(bc_all_file);
-		std::string lstr;
-    	boost::regex expr ("(\\w+)\\s+(\\w+)");
-   		boost::smatch what;
-   		if (!words.is_open()) {
-        	std::string err_str = "The bc_all_file cannot be open!\n";
-			std::cout << err_str;
-			throw my_exception(err_str);
-			
-    	} else {
 
-        	while (std::getline(words, lstr)) {
-            	bool res = boost::regex_search(lstr, what, expr);
-            	if (res) {
-                	std::string seq = what[1];
-                	std::string barcode = what[2];
-					int seq_int = atoi(seq.c_str());
-                	barseq_map.insert(std::pair<int, std::string>(seq_int, barcode));
-            	}
-        	}
-    	}
+	std::string hStr = "\nError:\nHighlight format options:\n"
+		"1. --ha : highlight all barcodes\n"
+		"2. --bc-u <file>: barcodes specified with sequences\n"
+		"3. --bc-a <file> --bc-u <file> : barcodes specified with indices\n";
 
-		// Now get the numbers from bc_used_file
-		
-		std::ifstream seqs(bc_used_file);
-		std::string seq_str;
-		if (!seqs.is_open()) {
-			std::string err_string = "The bc_all_file cannot be open!\n";
-			std::cout << err_string;
-			throw my_exception(err_string);
+	// Be careful with the logic of three variables
+	if (isHA) {
+		if (bc_a || bc_u) {
+			std::cout << "\nError:\n--ha is to be set alone, not with"
+				" --ba-all or bc-used\n";
+			std::cout << hStr << '\n';
+			all_set = false;
 		} else {
-			while (std::getline(seqs, seq_str)) {
-				int seq_int = atoi(seq_str.c_str());
-				// Insert in into barcode_used
-				std::string lused = barseq_map[seq_int];
-				used_barcodes.insert(lused);
-			}
+			isBcAll = true;
 		}
-	} else if (vm.count("ha")) {
-		// Highlight all barcodes
-		isHA = true;
+	} else if (bc_u) {
+		if (!bc_a) {
+			bool ret_val = load_with_barcode_seqs(bc_used_file);
+			if (!ret_val)
+				all_set = false;
+		} else {
+			bool ret_val = load_with_barcode_indices(bc_all_file, bc_used_file);
+			if (!ret_val)
+				all_set = false;
+		}
+	} else if (bc_a) {
+		std::cout << "\nError:\n--bc-all need to be set with --bc-used.\n";
+		std::cout << hStr << '\n';
+            all_set = false;
 	}
-
+	
 
 	if (vm.count("file1")) {
 		std::cout << "First fastq file is set to: " << file1_str << ".\n";
