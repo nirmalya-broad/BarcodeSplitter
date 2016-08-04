@@ -153,7 +153,7 @@ bool bc_splitter::load_with_barcode_seqs(const std::string& bc_used_file) {
         	bool varAlpha = isAlpha(seq_str);
             if (!varAlpha) {
                 std::cout << "\nError:\nEither use barcode sequence in the file"
-                    "with the bc_used option.\n"
+                    " with the bc_used option.\n"
                     "Or set both bc-all and bc-used options.\n\n";
                 all_set = false;
                 break;
@@ -302,10 +302,11 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 	isHA = vm.count("ha") ;
 
 
-	std::string hStr = "\nError:\nHighlight format options:\n"
+	std::string hStr = "\nNote:\nHighlight format options:\n"
 		"1. --ha : highlight all barcodes\n"
-		"2. --bc-u <file>: barcodes specified with sequences\n"
-		"3. --bc-a <file> --bc-u <file> : barcodes specified with indices\n";
+		"2. --bc-used <file-u>: provide sequence of used barcodes in file-u one in a line.\n"
+		"3. --bc-all <file-a> --bc-used <file-u> : provide all barcodes in file-a one in a line\n" 
+			"\t\tin <index><tab><barcode> format and used barcode indices one in a line in file-u\n";
 
 	// Be careful with the logic of three variables
 	if (isHA) {
@@ -321,10 +322,12 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 		if (!bc_a) {
 			bool ret_val = load_with_barcode_seqs(bc_used_file);
 			if (!ret_val)
+				std::cout << hStr << '\n';
 				all_set = false;
 		} else {
 			bool ret_val = load_with_barcode_indices(bc_all_file, bc_used_file);
 			if (!ret_val)
+				std::cout << hStr << '\n';
 				all_set = false;
 		}
 	} else if (bc_a) {
