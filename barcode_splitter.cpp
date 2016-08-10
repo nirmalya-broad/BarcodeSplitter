@@ -7,6 +7,7 @@
 #include <cstring>
 #include <set>
 #include <cctype>
+#include <memory>
 
 #include "BKTree.h"
 
@@ -67,8 +68,10 @@ class bc_splitter {
 	int allowed_MB;
 	std::string bc_used_file;
 	std::string bc_all_file;
-	std::map<std::string, std::vector<std::string>> lQueueMap;
-    std::map<std::string, std::vector<std::string>> rQueueMap;
+	//std::map<std::string, std::vector<std::string>> lQueueMap;
+    //std::map<std::string, std::vector<std::string>> rQueueMap;
+	std::map<std::string, std::vector<std::unique_ptr<std::string>>> lQueueMap;
+	std::map<std::string, std::vector<std::unique_ptr<std::string>>> rQueueMap;
 	std::set<std::string> barcode_set;
 	std::set<std::string> outfile_set;
 	std::map<std::string, unsigned long> zero_dist_map;
@@ -426,15 +429,25 @@ bc_splitter::updateMaps(std::string& barcode_str,
 
 	totalcap += allcap;
 
-	lQueueMap[barcode_str].push_back(lword1);
-	lQueueMap[barcode_str].push_back(lword2);
-	lQueueMap[barcode_str].push_back(lword3);
-	lQueueMap[barcode_str].push_back(lword4);
+	lQueueMap[barcode_str].push_back(std::make_unique<std::string>(lword1));
+	lQueueMap[barcode_str].push_back(std::make_unique<std::string>(lword2));
+	lQueueMap[barcode_str].push_back(std::make_unique<std::string>(lword3));
+	lQueueMap[barcode_str].push_back(std::make_unique<std::string>(lword4));
 
-	rQueueMap[barcode_str].push_back(rword1);
-	rQueueMap[barcode_str].push_back(rword2);
-	rQueueMap[barcode_str].push_back(rword3);
-	rQueueMap[barcode_str].push_back(rword4);
+	rQueueMap[barcode_str].push_back(std::make_unique<std::string>(rword1));
+	rQueueMap[barcode_str].push_back(std::make_unique<std::string>(rword2));
+	rQueueMap[barcode_str].push_back(std::make_unique<std::string>(rword3));
+	rQueueMap[barcode_str].push_back(std::make_unique<std::string>(rword4));
+
+	//lQueueMap[barcode_str].push_back(lword1);
+	//lQueueMap[barcode_str].push_back(lword2);
+	//lQueueMap[barcode_str].push_back(lword3);
+	//lQueueMap[barcode_str].push_back(lword4);
+
+	//rQueueMap[barcode_str].push_back(rword1);
+	//rQueueMap[barcode_str].push_back(rword2);
+	//rQueueMap[barcode_str].push_back(rword3);
+	//rQueueMap[barcode_str].push_back(rword4);
 
 	return totalcap;
 }
@@ -460,19 +473,21 @@ void bc_splitter::writeMapsToFile() {
         }
 
         // Dump the content of the two maps to the two files
+		std::vector<std::unique_ptr<std::string>> & valSet1 = lQueueMap[barcode];
+        std::vector<std::unique_ptr<std::string>> & valSet2 = rQueueMap[barcode];
 
-        std::vector<std::string> & valSet1 = lQueueMap[barcode];
-        std::vector<std::string> & valSet2 = rQueueMap[barcode];
+        //std::vector<std::string> & valSet1 = lQueueMap[barcode];
+        //std::vector<std::string> & valSet2 = rQueueMap[barcode];
 
         for (auto const& kv1 : valSet1) {
- 	        std::string val1 = kv1;
+ 	        std::string val1 = *kv1;
             ofs1 << val1 << '\n';
         }
 
         ofs1.close();
 
 		for (auto const& kv2 : valSet2) {
-        	std::string val2 = kv2;
+        	std::string val2 = *kv2;
             ofs2 << val2 << '\n';
         }
 
