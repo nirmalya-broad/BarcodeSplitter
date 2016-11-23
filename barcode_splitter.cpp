@@ -106,7 +106,7 @@ class my_exception : public std::exception {
 
 void bc_splitter::print_help() {
     std::cout << desc << "\n";
-	std::cout << "Usage: bc_splitter -t allseq -d <dict_file> --file1 <file1> --file2 <file2>"
+	std::cout << "Usage: bc_splitter -d <dict_file> --file1 <file1> --file2 <file2>"
 			" -p <prefix_str> -o <outdir>\n\n";
 }
 
@@ -232,12 +232,12 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 	bool all_set = true;
 	desc.add_options()
 		("help,h", "produce help message")
-		("type,t", po::value(&ltype), "allseq/rnatagseq")
 		("dict-file,d", po::value<std::string>(&dict_file), "Dictionary file")
 		("file1", po::value<std::string>(&file1_str), "First file")
 		("file2", po::value<std::string>(&file2_str), "Second file")
 		("prefix,p", po::value<std::string>(&prefix_str), "Prefix string")
 		("outdir,o", po::value<std::string>(&outdirpath), "Output directory")	
+		("type,t", po::value(&ltype)->default_value("allseq"), "Optional allseq/rnatagseq")
 		("ha", "Optional/Highlight all barcodes")
 		("bc-all", po::value(&bc_all_file), "Optional/File of all barcodes")
 		("bc-used", po::value(&bc_used_file), "Optional/File of used barcodes, one number per line")

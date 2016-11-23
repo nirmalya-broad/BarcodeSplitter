@@ -106,7 +106,7 @@ class my_exception : public std::exception {
 
 void bc_splitter::print_help() {
     std::cout << desc << "\n";
-	std::cout << "Usage: bc_splitter -d <dict_file> --file1 <file1> --file2 <file2>"
+	std::cout << "Usage: bc_splitter_rts -d <dict_file> --file1 <file1> --file2 <file2>"
 			" -p <prefix_str> -o <outdir>\n\n";
 }
 
@@ -242,10 +242,6 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 		("bc-used", po::value(&bc_used_file), "Optional/File of used barcodes, one number per line")
 		("mismatch,m", po::value(&cutoff)->default_value(1), 
 			"Optional/Maximum allowed mismatches.")
-		("bc-start", po::value(&barcode_start)->default_value(6), 
-			"Optional/Barcode start position")
-		("bc-size", po::value(&barcode_size)->default_value(6), 
-			"Optional/Barcode size")
 		("allowed-mb", po::value(&allowed_MB)->default_value(2048),
 			"Optional/Estimated memory requirement in MB.")
 	;
@@ -522,7 +518,11 @@ void bc_splitter::split_engine() {
 		// calculate the minimum distance between the target and references
 
 		int smallest_dist = cutoff + 1;
-		std::string smallest_barcode = "JJJJJJ";
+
+		// The smallest_barcode initialization could technically be anything
+		// since we overwrite this variable.
+
+		std::string smallest_barcode = "JJJJJJJJ";
 
 		std::vector<int> dist_vec;
 		for (auto const& val : results) {
@@ -542,7 +542,7 @@ void bc_splitter::split_engine() {
 			}
 		}
 
-		//log_detailed << "actual_barcode: " << barcode_str << 
+		//std::cout << "actual_barcode: " << barcode_str << 
 		//	", smallest barcode: " <<  smallest_barcode <<  
 		//	", sallest dist: " << smallest_dist << 
 		//	", smallest_count: " << smallest_count << "\n";
