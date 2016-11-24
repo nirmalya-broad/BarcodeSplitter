@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "BKTree.h"
+#include "fastq_reader.hpp"
 
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -525,19 +526,19 @@ void bc_splitter::split_engine() {
 
 	// We shall start reading the first line. The assumption is that second line 
 	// contains the barcode.
-	std::ifstream file1(file1_str);
-	std::ifstream file2(file2_str);
+	fastq_reader file1(file1_str);
+	fastq_reader file2(file2_str);
 
-	while (std::getline(file1, lword1)) {
+	while (file1.getline(lword1)) {
 
-		if (!std::getline(file1, lword2)) {break;}
-		if (!std::getline(file1, lword3)) {break;}
-		if (!std::getline(file1, lword4)) {break;}
+		if (!file1.getline(lword2)) {break;}
+		if (!file1.getline(lword3)) {break;}
+		if (!file1.getline(lword4)) {break;}
 		
-		if (!std::getline(file2, rword1)) {break;}
-		if (!std::getline(file2, rword2)) {break;}
-		if (!std::getline(file2, rword3)) {break;}
-		if (!std::getline(file2, rword4)) {break;}
+		if (!file2.getline(rword1)) {break;}
+		if (!file2.getline(rword2)) {break;}
+		if (!file2.getline(rword3)) {break;}
+		if (!file2.getline(rword4)) {break;}
 
 		// The barcode stays at the second line of each four lines of first
 		// read file.

@@ -183,7 +183,7 @@ int BKNode<std::string>::distance(const BKNode<std::string>& rhs) const{
 	if (m !=n ){ 
 		std::string msg = "Source and target have different length.\n" 
 			"The size of the barcode from file1 does not match with\n" 
-			" one from the dictionary.\n";
+			" one from the dictionary.\n" + source + "\n" + target + "\n";
 		throw std::invalid_argument(msg);
 	}
 	int ldist = 0;

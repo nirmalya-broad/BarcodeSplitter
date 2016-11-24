@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "BKTree.h"
+#include "fastq_reader.hpp"
 
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -28,6 +29,7 @@ struct classcomp {
 		return rhs > lhs;
 	}
 };
+
 
 class bc_splitter {
 
@@ -52,6 +54,8 @@ class bc_splitter {
 	bool load_with_barcode_seqs(const std::string& bc_used_file);
 	bool load_with_barcode_indices(const std::string& bc_all_file, 
 		const std::string& bc_used_file);
+    bool has_suffix(const std::string &str, const std::string &suffix);
+    std::unique_ptr<bio::filtering_istream> get_instream(std::string infile_str);
 
 	private:
 	int cutoff;
@@ -71,6 +75,7 @@ class bc_splitter {
 	//std::map<std::string, std::vector<std::string>> lQueueMap;
     //std::map<std::string, std::vector<std::string>> rQueueMap;
 	std::map<std::string, std::vector<std::unique_ptr<std::string>>> lQueueMap;
+    
 	std::map<std::string, std::vector<std::unique_ptr<std::string>>> rQueueMap;
 	std::set<std::string> barcode_set;
 	std::set<std::string> outfile_set;
@@ -92,6 +97,7 @@ class bc_splitter {
 	bool validUmi = false;
 	bool isBcAll = true;
 	bool isHA = false;
+    bool kab = false;
 
 };
 
@@ -237,6 +243,7 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 		("file2", po::value<std::string>(&file2_str), "Second file")
 		("prefix,p", po::value<std::string>(&prefix_str), "Prefix string")
 		("outdir,o", po::value<std::string>(&outdirpath), "Output directory")	
+        ("keep-all-bc,k", po::bool_switch(&kab), "Optional/Keep all nine bases of barcode?")
 		("ha", "Optional/Highlight all barcodes")
 		("bc-all", po::value(&bc_all_file), "Optional/File of all barcodes")
 		("bc-used", po::value(&bc_used_file), "Optional/File of used barcodes, one number per line")
@@ -465,6 +472,7 @@ void bc_splitter::writeMapsToFile() {
 
 } 
 
+
 void bc_splitter::split_engine() {
 
 	// The words starting with lword is for read 1
@@ -491,31 +499,39 @@ void bc_splitter::split_engine() {
 
 	// We shall start reading the first line. The assumption is that second line 
 	// contains the barcode.
-	std::ifstream file1(file1_str);
-	std::ifstream file2(file2_str);
 
-	while (std::getline(file1, lword1)) {
+    fastq_reader file1(file1_str);
+    fastq_reader file2(file2_str);
 
-		if (!std::getline(file1, lword2)) {break;}
-		if (!std::getline(file1, lword3)) {break;}
-		if (!std::getline(file1, lword4)) {break;}
+    std::cout << "Here we are too!\n";
+
+	while (file1.getline(lword1)) {
+
+		if (!file1.getline(lword2)) {break;}
+		if (!file1.getline(lword3)) {break;}
+		if (!file1.getline(lword4)) {break;}
 		
-		if (!std::getline(file2, rword1)) {break;}
-		if (!std::getline(file2, rword2)) {break;}
-		if (!std::getline(file2, rword3)) {break;}
-		if (!std::getline(file2, rword4)) {break;}
+		if (!file2.getline(rword1)) {break;}
+		if (!file2.getline(rword2)) {break;}
+		if (!file2.getline(rword3)) {break;}
+		if (!file2.getline(rword4)) {break;}
 
 		// The barcode stays at the second line of each four lines of first
 		// read file.
-
-		int barcode_size_s = barcode_size -1;
+        
+        int barcode_size_s = 0;
+        if (kab) {
+            barcode_size_s = barcode_size;
+        } else {
+		    barcode_size_s = barcode_size -1;
+        }
 		// We want to the 9th bases of the barcode, since it is not useful.
 		std::string barcode_str = lword2.substr(barcode_start, barcode_size_s);	
 		std::vector<std::string> results;
 		
 		results = tree.find(barcode_str, cutoff);
 
-		// calculate the minimum distance between the target and references
+		// calculate the minimum dIstance between the target and references
 
 		int smallest_dist = cutoff + 1;
 
@@ -734,3 +750,6 @@ int main(int argc, char* argv[]) {
         
     return 0;
 }
+
+
+
