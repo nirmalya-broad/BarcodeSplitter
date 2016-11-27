@@ -134,6 +134,7 @@ bool dict_builder::parse_args(int argc, char* argv[]) {
         std::cout << "Outfile is set to: " << outfile << ".\n";
     }
 
+
 	return all_set;
 }
 

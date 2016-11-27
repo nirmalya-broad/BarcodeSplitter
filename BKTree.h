@@ -52,7 +52,7 @@ class BKTree {
         ~BKTree();
     
         void insert(const T &);
-        std::vector<T> find(const T &, const int) const;
+        std::vector<T> find(const T &, const int, bool remove_last = false) const;
         int size() const;
 };
 
@@ -92,11 +92,11 @@ void BKTree<T>::insert(const T &value) {
 }
 
 template <typename T>
-std::vector<T> BKTree<T>::find(const T &rhs, const int threshold) const {
+std::vector<T> BKTree<T>::find(const T &rhs, const int threshold, bool remove_last) const {
     if (root==0) {
         return std::vector<T>();
     } else {
-        return root->find(rhs,threshold);
+        return root->find(rhs,threshold, remove_last);
     }
 }
 

@@ -69,8 +69,8 @@ class BKNode {
         // Accessors
         T get() const;
 
-        int distance(const BKNode<std::string> &) const;
-        std::vector<T> find(const T &, const int);
+        int distance(const BKNode<std::string> &, bool remove_last = false) const;
+        std::vector<T> find(const T &, const int, bool remove_last = false);
         
         // Mutators
         void insert(const T &);
@@ -133,8 +133,8 @@ void BKNode<T>::insert(const T &rhs) {
 
 
 template <typename T>
-std::vector<T> BKNode<T>::find(const T &rhs, const int threshold) {
-    int dist = distance(rhs);
+std::vector<T> BKNode<T>::find(const T &rhs, const int threshold, bool remove_last) {
+    int dist = distance(rhs, remove_last);
     
     std::vector<T> results=std::vector<T>();
     // If the current node is in the threshold, return it
@@ -146,7 +146,7 @@ std::vector<T> BKNode<T>::find(const T &rhs, const int threshold) {
     
     for (int i=dmin; i<=dmax; i++) {
         if (children.count(i)) {
-            std::vector<T> partial= std::vector<T>(children[i]->find(rhs,threshold));
+            std::vector<T> partial= std::vector<T>(children[i]->find(rhs,threshold, remove_last));
             
             results.insert(results.end(), partial.begin(), partial.end());
         }
@@ -161,7 +161,7 @@ std::vector<T> BKNode<T>::find(const T &rhs, const int threshold) {
 // transposition.
 
 template <>
-int BKNode<std::string>::distance(const BKNode<std::string>& rhs) const{
+int BKNode<std::string>::distance(const BKNode<std::string>& rhs, bool remove_last) const{
     std::string source=value;
     std::string target=rhs.value;
   
@@ -188,7 +188,12 @@ int BKNode<std::string>::distance(const BKNode<std::string>& rhs) const{
 	}
 	int ldist = 0;
 
-	for (int j = 0; j < n; j++) {
+    int n1 = n;
+    if (remove_last) {
+        n1--;
+    }
+
+	for (int j = 0; j < n1; j++) {
 		if (source[j] != target[j])	{
 			ldist++;
 		}

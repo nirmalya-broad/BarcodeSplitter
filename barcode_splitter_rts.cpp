@@ -36,7 +36,7 @@ class bc_splitter {
 	public:
 	//bc_splitter();
 	bool parse_args(int argc, char* argv[]);
-	int distance(std::string source, std::string target);	
+	int distance(std::string source, std::string target, bool remove_last = false);	
 	unsigned long updateMaps(std::string& barcode_str,
     	std::string& lword1, std::string& lword2,
     	std::string& lword3, std::string& lword4,
@@ -97,7 +97,7 @@ class bc_splitter {
 	bool validUmi = false;
 	bool isBcAll = true;
 	bool isHA = false;
-    bool kab = false;
+    bool keep_last;
 
 };
 
@@ -243,7 +243,7 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 		("file2", po::value<std::string>(&file2_str), "Second file")
 		("prefix,p", po::value<std::string>(&prefix_str), "Prefix string")
 		("outdir,o", po::value<std::string>(&outdirpath), "Output directory")	
-        ("keep-all-bc,k", po::bool_switch(&kab), "Optional/Keep all nine bases of barcode?")
+        ("keep_last,k", "Optional/Do use last base of barcode (RNATag-Seq)")
 		("ha", "Optional/Highlight all barcodes")
 		("bc-all", po::value(&bc_all_file), "Optional/File of all barcodes")
 		("bc-used", po::value(&bc_used_file), "Optional/File of used barcodes, one number per line")
@@ -346,11 +346,13 @@ bool bc_splitter::parse_args(int argc, char* argv[]) {
 		all_set = false;
 		std::cout << "Error: Outdir is not set.\n";
 	}
+    keep_last = vm.count("keep_last");
+    printf("keep_last set to: %s\n", keep_last ? "true" : "false");
 	
 	return all_set;
 }
 
-int bc_splitter::distance(std::string source, std::string target) {
+int bc_splitter::distance(std::string source, std::string target, bool remove_last) {
 
     const int n = source.length();
     const int m = target.length();
@@ -367,7 +369,13 @@ int bc_splitter::distance(std::string source, std::string target) {
 
     int ldist = 0;
 
-    for (int j = 0; j < n; j++) {
+    int n1 = n;
+    if (remove_last)
+    {
+        n1--;
+    }
+
+    for (int j = 0; j < n1; j++) {
         if (source[j] != target[j]) {
             ldist++;
         }
@@ -519,17 +527,12 @@ void bc_splitter::split_engine() {
 		// The barcode stays at the second line of each four lines of first
 		// read file.
         
-        int barcode_size_s = 0;
-        if (kab) {
-            barcode_size_s = barcode_size;
-        } else {
-		    barcode_size_s = barcode_size -1;
-        }
 		// We want to the 9th bases of the barcode, since it is not useful.
-		std::string barcode_str = lword2.substr(barcode_start, barcode_size_s);	
+		std::string barcode_str = lword2.substr(barcode_start, barcode_size);	
 		std::vector<std::string> results;
 		
-		results = tree.find(barcode_str, cutoff);
+        bool remove_last = !keep_last;
+		results = tree.find(barcode_str, cutoff, remove_last);
 
 		// calculate the minimum dIstance between the target and references
 
@@ -542,7 +545,7 @@ void bc_splitter::split_engine() {
 
 		std::vector<int> dist_vec;
 		for (auto const& val : results) {
-			int ldist = distance(val, barcode_str);
+			int ldist = distance(val, barcode_str, remove_last);
 			if (ldist < smallest_dist) {
 				smallest_dist = ldist;
 				smallest_barcode = val;
