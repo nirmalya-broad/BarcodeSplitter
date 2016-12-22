@@ -480,7 +480,7 @@ void bc_splitter::writeMapsToFile() {
 
 } 
 
-
+		
 void bc_splitter::split_engine() {
 
 	// The words starting with lword is for read 1
@@ -590,31 +590,8 @@ void bc_splitter::split_engine() {
 			no_match_total++;
 		}
 		barcode_set.insert(write_barcode);
-
-
-		boost::regex expr ("(\\S+)\\s*(\\S*)");
-        boost::smatch what;
-        bool res = boost::regex_search(lword1, what, expr);
-        std::string hpart1;
-        std::string hpart2 = "";
-		std::string barcode_str_b = lword2.substr(barcode_start, barcode_size);
-        
-		std::string lword1A;
-		if (res) {
-        	hpart1 = what[1];
-            hpart2 = what[2];
-
-            if (hpart2.compare("") == 0) {
-                lword1A = hpart1 + ":" + barcode_str_b;
-            } else {
-                lword1A = hpart1 + ":" + barcode_str_b + " " + hpart2;
-            }
-        } else {
-            std::cout << "Problem in the barcode parser " << lword1 << "\n";
-            throw my_exception("Problem in the barcode parser.");
-        }
-		
-		totalcap = updateMaps(write_barcode, lword1A, lword2, lword3, lword4, 
+ 
+		totalcap = updateMaps(write_barcode, lword1, lword2, lword3, lword4, 
 			rword1, rword2, rword3, rword4, totalcap);
 			
 		//std::cout << "total cap: " << totalcap << "\n";
