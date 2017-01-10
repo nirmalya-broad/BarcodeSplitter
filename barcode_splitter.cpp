@@ -675,20 +675,29 @@ void bc_splitter::write_log() {
     log_freq << ".................." << "\n";
     log_freq << "Total non-match reads: " << no_match_total << " (" << no_match_percent << "%)\n\n";
 
+    // Add all the barcodes in the tree, even if it does not have any reads
+    // overlapped.
+    std::set<std::string> all_nodes = tree.get_nodes();
 
-	for (const auto& lbarcode : barcode_set) {
+	for (const auto& lbarcode : all_nodes) {
 
-		if (lbarcode == "ambiguous" || lbarcode == "no_match") {continue;}
-	
-		unsigned long zero_dist_count = zero_dist_map[lbarcode];
-		unsigned long one_dist_count = one_dist_map[lbarcode];
-		unsigned long higher_dist_count = higher_dist_map[lbarcode];
+        double zero_dist_percent = 0;
+        double one_dist_percent = 0;
+        double higher_dist_percent = 0;
+        double barcode_read_percent = 0;
+		unsigned long total_correct_count = 0;
 
-		unsigned long total_correct_count = zero_dist_count + one_dist_count + higher_dist_count;
-		double zero_dist_percent = ((double)zero_dist_count / (double)total_correct_count) * 100.0;
-		double one_dist_percent = ((double)one_dist_count / (double)total_correct_count) * 100.0;
-		double higher_dist_percent = 100 - zero_dist_percent - one_dist_percent;
-		double barcode_read_percent = ((double)total_correct_count / (double)total_reads) * 100;  
+        if (barcode_set.count(lbarcode) > 0) {	
+		    unsigned long zero_dist_count = zero_dist_map[lbarcode];
+		    unsigned long one_dist_count = one_dist_map[lbarcode];
+		    unsigned long higher_dist_count = higher_dist_map[lbarcode];
+
+		    total_correct_count = zero_dist_count + one_dist_count + higher_dist_count;
+		    zero_dist_percent = ((double)zero_dist_count / (double)total_correct_count) * 100.0;
+		    one_dist_percent = ((double)one_dist_count / (double)total_correct_count) * 100.0;
+		    higher_dist_percent = 100 - zero_dist_percent - one_dist_percent;
+		    barcode_read_percent = ((double)total_correct_count / (double)total_reads) * 100;  
+        }
 
 		std::string lbarcode2;
 		if (used_barcodes.count(lbarcode) > 0) {
