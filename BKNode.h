@@ -30,6 +30,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <set>
 
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -71,6 +72,7 @@ class BKNode {
 
         int distance(const BKNode<std::string> &, bool remove_last = false) const;
         std::vector<T> find(const T &, const int, bool remove_last = false);
+        std::set<T> get_nodes() const;
         
         // Mutators
         void insert(const T &);
@@ -129,6 +131,23 @@ void BKNode<T>::insert(const T &rhs) {
             children[dist]=new_node;
         }
     }
+}
+
+
+template <typename T>
+std::set<T> BKNode<T>::get_nodes() const{
+
+    std::set<T> node_set;   
+    node_set.insert(value);
+    int children_len = children.size();
+    if (children_len > 0) {
+        for (auto const& element : children) {
+            std::set<T> c_node_set = (element.second)->get_nodes();
+            node_set.insert(c_node_set.begin(), c_node_set.end());
+        }
+    }
+    return node_set;
+
 }
 
 

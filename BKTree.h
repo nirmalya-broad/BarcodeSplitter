@@ -30,6 +30,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <set>
 #include "BKNode.h"
 
 #include "boost/archive/text_oarchive.hpp"
@@ -53,6 +54,7 @@ class BKTree {
     
         void insert(const T &);
         std::vector<T> find(const T &, const int, bool remove_last = false) const;
+        std::set<T> get_nodes() const;
         int size() const;
 };
 
@@ -97,6 +99,15 @@ std::vector<T> BKTree<T>::find(const T &rhs, const int threshold, bool remove_la
         return std::vector<T>();
     } else {
         return root->find(rhs,threshold, remove_last);
+    }
+}
+
+template <typename T>
+std::set<T> BKTree<T>::get_nodes() const {
+    if (root == 0) {
+        return std::set<T>();
+    } else {
+        return root->get_nodes();
     }
 }
 
