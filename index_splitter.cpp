@@ -72,6 +72,7 @@ class bc_splitter {
 	std::map<std::string, std::vector<std::unique_ptr<std::string>>> rQueueMap;
 	std::map<std::string, std::vector<std::unique_ptr<std::string>>> bcQueueMap;
 
+    std::set<std::string> all_nodes;
 	std::set<std::string> barcode_set;
 	std::set<std::string> outfile_set;
 	std::map<std::string, unsigned long> zero_dist_map;
@@ -122,6 +123,8 @@ void bc_splitter::initialize() {
     boost::archive::text_iarchive iar(iff);
         
     iar >> tree;
+    // Get all the nodes
+    all_nodes = tree.get_nodes();
 
 	struct stat st = {0};
 
@@ -299,7 +302,7 @@ void bc_splitter::writeMapsToFile() {
         std::string file1 = "";
         std::string file2 = "";
         std::string bcfile = "";
-        if (barcode.compare("no_match") == 0) {
+        if (barcode.compare("no_match") == 0 || barcode.compare("ambiguous") == 0 ) {
             file1 = outdirpath + "/" + prefix_str + ".unmatched.1.fastq.gz";
             file2 = outdirpath + "/" + prefix_str + ".unmatched.2.fastq.gz";
             bcfile = outdirpath + "/" + prefix_str + ".unmatched.barcode_1.fastq.gz";
@@ -474,9 +477,12 @@ void bc_splitter::split_engine() {
 		}
 		barcode_set.insert(write_barcode);
 
-		totalcap = updateMaps(write_barcode, indword1, indword2, indword3, 
-            indword4, lword1, lword2, lword3, lword4, 
-			rword1, rword2, rword3, rword4, totalcap);
+        std::string indword1_p7 = indword1 + indword2;
+        std::string lword1_p7 = lword1 + indword2;
+        std::string rword1_p7 = rword1 + indword2;
+		totalcap = updateMaps(write_barcode, indword1_p7, indword2, indword3, 
+            indword4, lword1_p7, lword2, lword3, lword4, 
+			rword1_p7, rword2, rword3, rword4, totalcap);
 			
 		//std::cout << "total cap: " << totalcap << "\n";
 
@@ -520,19 +526,27 @@ void bc_splitter::write_log() {
     log_freq << "Total non-match reads: " << no_match_total << " (" << no_match_percent << "%)\n\n";
 
 
-	for (const auto& lbarcode : barcode_set) {
+	for (const auto& lbarcode : all_nodes) {
 
-		if (lbarcode == "ambiguous" || lbarcode == "no_match") {continue;}
 	
-		unsigned long zero_dist_count = zero_dist_map[lbarcode];
-		unsigned long one_dist_count = one_dist_map[lbarcode];
-		unsigned long higher_dist_count = higher_dist_map[lbarcode];
+		unsigned long total_correct_count = 0;
+		double zero_dist_percent = 0;
+		double one_dist_percent = 0;
+		double higher_dist_percent = 0;
+		double barcode_read_percent = 0;
 
-		unsigned long total_correct_count = zero_dist_count + one_dist_count + higher_dist_count;
-		double zero_dist_percent = ((double)zero_dist_count / (double)total_correct_count) * 100.0;
-		double one_dist_percent = ((double)one_dist_count / (double)total_correct_count) * 100.0;
-		double higher_dist_percent = 100 - zero_dist_percent - one_dist_percent;
-		double barcode_read_percent = ((double)total_correct_count / (double)total_reads) * 100;  
+        if (barcode_set.count(lbarcode) > 0) {  
+
+		    unsigned long zero_dist_count = zero_dist_map[lbarcode];
+		    unsigned long one_dist_count = one_dist_map[lbarcode];
+		    unsigned long higher_dist_count = higher_dist_map[lbarcode];
+
+		    total_correct_count = zero_dist_count + one_dist_count + higher_dist_count;
+		    zero_dist_percent = ((double)zero_dist_count / (double)total_correct_count) * 100.0;
+		    one_dist_percent = ((double)one_dist_count / (double)total_correct_count) * 100.0;
+		    higher_dist_percent = 100 - zero_dist_percent - one_dist_percent;
+		    barcode_read_percent = ((double)total_correct_count / (double)total_reads) * 100;  
+        }
 
   		
 		log_freq << "Barcode: " << lbarcode << "\n";
