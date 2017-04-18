@@ -6,6 +6,7 @@
 import argparse
 import re
 import os
+import os.path
 from subprocess import call
 
 parser = argparse.ArgumentParser(description = "Process inputs for index splitter", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -32,7 +33,7 @@ print("p7 index dict file" + dictfile)
 prefix_set = set()
 
 for lfile in os.listdir(indir):
-    if lfile.endswith("fastq.gz"):
+    if lfile.endswith("fastq.gz") or lfile.endswith("fastq"):
         #print("file: " + lfile)
         parts = lfile.split(".")
         prefix = parts[0]
@@ -50,18 +51,37 @@ if not os.path.exists(outdir):
 joblist_path = outdir + ldelim + "index_bcsplit_joblist.txt"
 jfile = open(joblist_path, "w")
 
+def refine_gz_file(gz_file):
+    if not os.path.isfile(gz_file):
+        only_file = gz_file.replace(".gz", "")
+        if not os.path.isfile(only_file):
+            raise IOError('File not found: ' + gz_file)
+        else:
+            return only_file
+    else: 
+        return gz_file
+
+
 for prefix in prefix_set:
     parts = prefix.split("_")
     lane = parts[0]
-    index_file = indir + ldelim + prefix + "." + lane + ".barcode_1.fastq.gz"
-    read1_file = indir + ldelim + prefix + "." + lane + ".1.fastq.gz"
-    read2_file = indir + ldelim + prefix + "." + lane + ".2.fastq.gz"
+
+    index_file_str = indir + ldelim + prefix + "." + lane + ".barcode_1.fastq.gz"
+    index_file = refine_gz_file(index_file_str)
+    read1_file_str = indir + ldelim + prefix + "." + lane + ".1.fastq.gz"
+    read1_file = refine_gz_file(read1_file_str)
+    read2_file_str = indir + ldelim + prefix + "." + lane + ".2.fastq.gz"
+    read2_file = refine_gz_file(read2_file_str)
+
+    out_log = outdir + ldelim + prefix + "." + lane + "_out.txt"
+    err_log = outdir + ldelim + prefix + "." + lane + "_err.txt"
     lprefix = prefix + "." + lane
     print("prefix: " + lprefix)
     #print("index: " + index_file)
     #print("read1_file: " + read1_file)
     #print("read2_file: " + read2_file)
-    job_str = index_split_cpp + " -d " + dictfile + " -i " + index_file + " --file1 " + read1_file + " --file2 " + read2_file + " -p " + lprefix + " -o " + outdir + "\n"
+    job_str = index_split_cpp + " -d " + dictfile + " -i " + index_file + " --file1 " + read1_file + \
+        " --file2 " + read2_file + " -p " + lprefix + " -o " + outdir + " 1> " + out_log + " 2> " + err_log + "\n"
     print("job_str: " + job_str)
     jfile.write(job_str)
 jfile.close()
