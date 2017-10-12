@@ -4,6 +4,7 @@
 # eligible input files and from there would submit index_splitter for each of the flowcell ids
 
 import argparse
+import shutil
 import re
 import os
 import os.path

@@ -619,9 +619,9 @@ void bc_splitter::split_engine() {
 				hpart2 = what[2];
 
 				if (hpart2.compare("") == 0) {	
-					rword1A = hpart1 + ":" + umi_str;
+					rword1A = hpart1 + ":umi_" + umi_str;
 				} else {
-					rword1A = hpart1 + ":" + umi_str + " " + hpart2;
+					rword1A = hpart1 + ":umi_" + umi_str + " " + hpart2;
 				}
 			} else {
 				std::cout << "Problem in the UMI parser " << rword1 << "\n";
