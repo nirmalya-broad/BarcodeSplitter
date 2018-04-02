@@ -56,6 +56,8 @@ class bc_splitter {
 		const std::string& bc_used_file);
     bool has_suffix(const std::string &str, const std::string &suffix);
     std::unique_ptr<bio::filtering_istream> get_instream(std::string infile_str);
+    bool file_exists (const std::string& name);
+    void create_other_files();
 
 	private:
 	int cutoff;
@@ -692,6 +694,27 @@ void bc_splitter::write_log() {
 	std::cout << "No-match: " << no_match_percent << "%\n";
 }
 
+bool bc_splitter::file_exists (const std::string& name) {
+  struct stat buffer;
+  return (stat (name.c_str(), &buffer) == 0);
+}
+
+void bc_splitter::create_other_files() {
+
+    std::set<std::string> all_nodes = tree.get_nodes();
+
+    for (const auto& lbarcode : all_nodes) {
+        const std::string file1_str = outdirpath + "/" + prefix_str + "_" + lbarcode + "_R1.fastq";
+        const std::string file2_str = outdirpath + "/" + prefix_str + "_" + lbarcode + "_R2.fastq";
+        if (!file_exists(file1_str)) {
+            std::ofstream file1(file1_str);
+        }
+        if (!file_exists(file2_str)) {
+            std::ofstream file1(file2_str);
+        }
+    }
+}
+
 
 int main(int argc, char* argv[]) { 
 
@@ -735,7 +758,8 @@ int main(int argc, char* argv[]) {
     }
 
 	lbs.write_log();
-        
+    lbs.create_other_files();
+    
     return 0;
 }
 
